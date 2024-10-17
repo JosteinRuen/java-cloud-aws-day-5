@@ -126,40 +126,7 @@ public class OrderController {
             return ResponseEntity.status(500).body("Failed to create order");
         }
     }
-    /*
-    @PostMapping
-    public ResponseEntity<String> createOrder(@RequestBody Order order) {
-        try {
-            String orderJson = objectMapper.writeValueAsString(order);
-            System.out.println(orderJson);
-            PublishRequest publishRequest = PublishRequest.builder()
-                    .topicArn(topicArn)
-                    .message(orderJson)
-                    .build();
-            snsClient.publish(publishRequest);
-
-            PutEventsRequestEntry eventEntry = PutEventsRequestEntry.builder()
-                    .source("order.service")
-                    .detailType("OrderCreated")
-                    .detail(orderJson)
-                    .eventBusName(eventBusName)
-                    .build();
-
-            PutEventsRequest putEventsRequest = PutEventsRequest.builder()
-                    .entries(eventEntry)
-                    .build();
-
-            this.eventBridgeClient.putEvents(putEventsRequest);
-
-            String status = "Order created, Message Published to SNS and Event Emitted to EventBridge";
-            return ResponseEntity.ok(status);
-        } catch (JsonProcessingException e) {
-//            e.printStackTrace();
-            return ResponseEntity.status(500).body("Failed to create order");
-        }
-    }
-
-     */
+    
 
     @PutMapping("/{id}")
     public ResponseEntity<String> updateOrder(@PathVariable Integer id, @RequestBody Order updatedOrder) {
