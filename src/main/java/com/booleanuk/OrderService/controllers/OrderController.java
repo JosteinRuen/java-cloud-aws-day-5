@@ -19,6 +19,10 @@ import software.amazon.awssdk.services.sns.SnsClient;
 import software.amazon.awssdk.services.sqs.model.DeleteMessageRequest;
 import software.amazon.awssdk.services.sqs.model.Message;
 import software.amazon.awssdk.services.sqs.model.ReceiveMessageRequest;
+import software.amazon.awssdk.regions.Region;
+import software.amazon.awssdk.services.sns.SnsClient;
+import software.amazon.awssdk.services.sqs.SqsClient;
+import software.amazon.awssdk.services.eventbridge.EventBridgeClient;
 
 import java.util.List;
 
@@ -32,15 +36,24 @@ public class OrderController {
     private String queueUrl;
     private String topicArn;
     private String eventBusName;
+    private String RuleArn;
+    private String QueueArn;
+    private String subscriptionArn;
 
     public OrderController() {
-        this.sqsClient = SqsClient.builder().build();
-        this.snsClient = SnsClient.builder().build();
-        this.eventBridgeClient = EventBridgeClient.builder().build();
+        Region region = Region.EU_WEST_1; // Specify your region here
 
-        this.queueUrl = "";
-        this.topicArn = "";
-        this.eventBusName = "";
+
+        this.sqsClient = SqsClient.builder().region(region).build();
+        this.snsClient = SnsClient.builder().region(region).build();
+        this.eventBridgeClient = EventBridgeClient.builder().region(region).build();
+
+        this.queueUrl = "https://sqs.eu-west-1.amazonaws.com/637423341661/josteinruenOrderQueue";
+        this.topicArn = "arn:aws:sns:eu-west-1:637423341661:josteinruenOrderCreatedTopic";
+        this.eventBusName = "arn:aws:events:eu-west-1:637423341661:event-bus/josteinruenCustomEventBus";
+        this.RuleArn ="arn:aws:events:eu-west-1:637423341661:rule/josteinruenCustomEventBus/josteinruenOrderProcessedRule";
+        this.QueueArn = "arn:aws:sqs:eu-west-1:637423341661:josteinruenOrderQueue";
+        this.subscriptionArn = "\"arn:aws:sns:eu-west-1:637423341661:josteinruenOrderCreatedTopic:4587c0f2-2a33-4c27-9b78-b0bb20dd8ac2\"";
 
         this.objectMapper = new ObjectMapper();
     }
