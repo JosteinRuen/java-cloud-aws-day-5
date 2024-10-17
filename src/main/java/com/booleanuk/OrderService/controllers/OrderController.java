@@ -2,8 +2,10 @@ package com.booleanuk.OrderService.controllers;
 
 
 import com.booleanuk.OrderService.models.Order;
+import com.booleanuk.OrderService.repositories.OrderRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -29,6 +31,9 @@ import java.util.List;
 @RestController
 @RequestMapping("orders")
 public class OrderController {
+    @Autowired
+    private OrderRepository orderRepository;
+
     private SqsClient sqsClient;
     private SnsClient snsClient;
     private EventBridgeClient eventBridgeClient;
@@ -42,6 +47,8 @@ public class OrderController {
 
     public OrderController() {
         Region region = Region.EU_WEST_1; // Specify your region here
+
+
 
 
         this.sqsClient = SqsClient.builder().region(region).build();
@@ -90,6 +97,39 @@ public class OrderController {
     @PostMapping
     public ResponseEntity<String> createOrder(@RequestBody Order order) {
         try {
+            order.setTotal(order.getQuantity() * order.getAmount());
+            orderRepository.save(order);
+
+            String orderJson = objectMapper.writeValueAsString(order);
+            PublishRequest publishRequest = PublishRequest.builder()
+                    .topicArn(topicArn)
+                    .message(orderJson)
+                    .build();
+            snsClient.publish(publishRequest);
+
+            PutEventsRequestEntry eventEntry = PutEventsRequestEntry.builder()
+                    .source("order.service")
+                    .detailType("OrderCreated")
+                    .detail(orderJson)
+                    .eventBusName(eventBusName)
+                    .build();
+
+            PutEventsRequest putEventsRequest = PutEventsRequest.builder()
+                    .entries(eventEntry)
+                    .build();
+
+            this.eventBridgeClient.putEvents(putEventsRequest);
+
+            String status = "Order created, Message Published to SNS and Event Emitted to EventBridge";
+            return ResponseEntity.ok(status);
+        } catch (JsonProcessingException e) {
+            return ResponseEntity.status(500).body("Failed to create order");
+        }
+    }
+    /*
+    @PostMapping
+    public ResponseEntity<String> createOrder(@RequestBody Order order) {
+        try {
             String orderJson = objectMapper.writeValueAsString(order);
             System.out.println(orderJson);
             PublishRequest publishRequest = PublishRequest.builder()
@@ -118,6 +158,24 @@ public class OrderController {
             return ResponseEntity.status(500).body("Failed to create order");
         }
     }
+
+     */
+
+    @PutMapping("/{id}")
+    public ResponseEntity<String> updateOrder(@PathVariable Integer id, @RequestBody Order updatedOrder) {
+        return orderRepository.findById(id)
+                .map(order -> {
+                    order.setProcessed(updatedOrder.isProcessed());
+                    order.setQuantity(updatedOrder.getQuantity());
+                    order.setAmount(updatedOrder.getAmount());
+                    order.setTotal(updatedOrder.getQuantity() * updatedOrder.getAmount());
+                    orderRepository.save(order);
+                    return ResponseEntity.ok("Order updated");
+                })
+                .orElseGet(() -> ResponseEntity.status(404).body("Order not found"));
+    }
+
+
 
     private void processOrder(Order order) {
         System.out.println(order.toString());
